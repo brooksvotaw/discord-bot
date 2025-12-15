@@ -1,7 +1,7 @@
 services:
   discord-music-bot:
     build: .
-    container_name: discord-music-bot
+    container_name: discord-bot
     restart: unless-stopped
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
