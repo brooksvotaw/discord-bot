@@ -63,12 +63,6 @@ ydl_opts = {
     'extract_flat': False,
     'no_warnings': True,
 }
-# TODO
-# VOLUME NORMALIZATION - TEST
-# EMBEDS SENT ON AUTOPLAYED SONGS
-# AUTOPLAY SONGS TO SEARCH YOUTUBE CORRECTLY
-# AUTOPLAY QUEUE PULLS "TOP TRACK"
-
 
 ### BOT ###
 # LOAD TOKEN FROM .ENV
@@ -358,7 +352,6 @@ async def disconnect(ctx):
         await ctx.send("I'm not in a voice channel!")
 
 
-# TODO REWORK TO USE NEW AUTOPLAY METHODS ONCE CREATED
 @bot.command()
 async def play(ctx, *, search):
     # CONNECT TO VOICE
@@ -481,7 +474,6 @@ async def skip(ctx):
     await ctx.send(embed=embed)
 
 
-# TODO - REVIEW CODE AND ADD CURRENTLY PLAYING TRACK
 @bot.command()
 async def queue(ctx):
     queue = get_queue(ctx.guild.id)
