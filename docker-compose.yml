@@ -13,3 +13,11 @@ services:
       - MUSICBRAINZ_CONTACT=${MUSICBRAINZ_CONTACT}
     volumes:
       - ./logs:/app/logs
+    labels:
+      - "net.unraid.docker.icon=https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/discord.png"
+      - "net.unraid.docker.webui=false"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
