@@ -79,6 +79,15 @@ mb_client = musicbrainz.MBClient()
 lastfm_client = lastfm.LastFMClient()
 
 ### METHODS ###
+def in_voice_channel():
+    async def predicate(ctx):
+        if not ctx.author.voice:
+            await ctx.send("❌ You must be in a voice channel to use this command!")
+            return False
+        return True
+    return commands.check(predicate)
+
+
 def get_queue(guild_id):
     if guild_id not in music_queues:
         music_queues[guild_id] = []
@@ -338,6 +347,7 @@ async def ping(ctx):
 
 # TODO SEND EMBED INSTEAD OF MESSAGE?
 @bot.command()
+@in_voice_channel()
 async def disconnect(ctx):
     if ctx.voice_client:
         if ctx.voice_client.is_playing():
@@ -358,12 +368,9 @@ async def disconnect(ctx):
 
 
 @bot.command()
+@in_voice_channel()
 async def play(ctx, *, search):
-    # CONNECT TO VOICE
-    if not ctx.author.voice:
-        await ctx.send("You need to be in a voice channel!")
-        return
-    
+    # CONNECT TO VOICE    
     voice_channel = ctx.author.voice.channel
     if not ctx.voice_client:
         await voice_channel.connect(self_deaf=True)
@@ -439,6 +446,7 @@ async def play(ctx, *, search):
 
 
 @bot.command()
+@in_voice_channel()
 async def skip(ctx):
     if not ctx.voice_client or not ctx.voice_client.is_playing():
         await ctx.send("Nothing is playing!")
@@ -480,6 +488,7 @@ async def skip(ctx):
 
 
 @bot.command()
+@in_voice_channel()
 async def queue(ctx):
     queue = get_queue(ctx.guild.id)
     autoplay_queue = get_autoplay_queue(ctx.guild.id)
@@ -538,6 +547,7 @@ async def queue(ctx):
 
 
 @bot.command()
+@in_voice_channel()
 async def shuffle(ctx):
     queue = get_queue(ctx.guild.id)
     
@@ -567,6 +577,7 @@ async def shuffle(ctx):
 
 
 @bot.command()
+@in_voice_channel()
 async def clear(ctx):
     queue = get_queue(ctx.guild.id)
     
@@ -584,6 +595,7 @@ async def clear(ctx):
 
 
 @bot.command()
+@in_voice_channel()
 async def remove(ctx, position: int):
     queue = get_queue(ctx.guild.id)
     
@@ -608,6 +620,7 @@ async def remove(ctx, position: int):
 
 
 @bot.command()
+@in_voice_channel()
 async def bump(ctx, position: int):
     queue = get_queue(ctx.guild.id)
     
@@ -633,6 +646,7 @@ async def bump(ctx, position: int):
 
 
 @bot.command()
+@in_voice_channel()
 async def autoplay(ctx):
     current_status = is_autoplay_enabled(ctx.guild.id)
     autoplay_enabled[ctx.guild.id] = not current_status
