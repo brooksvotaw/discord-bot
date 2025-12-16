@@ -190,7 +190,6 @@ async def query_youtube(search_query):
         return
 
 
-# NEEDS TO SEND EMBED ON AUTOPLAYED SONG SINCE YOU CAN'T SEE OTHERWISE
 async def play_song(ctx, song, from_autoplay=False):
     voice_client = ctx.voice_client
     audio_source = discord.FFmpegPCMAudio(
@@ -225,7 +224,7 @@ async def play_song(ctx, song, from_autoplay=False):
                     play_song(ctx, next_song), 
                     bot.loop
                 )
-                
+
                 # SEND EMBED
                 asyncio.run_coroutine_threadsafe(
                     ctx.send(embed=create_song_embed(ctx, next_song)),
@@ -291,7 +290,7 @@ def create_song_embed(ctx, song, mb_results=None):
             embed.add_field(name="Estimated Start", value=time_until_str, inline=True)
 
     # AUTOPLAY STATUS - TODO ADD MORE INFO ON FAILURES
-    if autoplay_enabled:
+    if autoplay_enabled and not from_autoplay:
         response_text = "✅ Autoplaying from this track" if mb_results else "❌ Failed to identify artist/track"
         embed.add_field(name="Autoplay", value=response_text, inline=True)
     
