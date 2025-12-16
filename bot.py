@@ -220,8 +220,14 @@ async def play_song(ctx, song, from_autoplay=False):
             if autoplay_queue:
                 next_song = autoplay_queue.pop(0)
                 
+                # PLAY SONG
                 asyncio.run_coroutine_threadsafe(
                     play_song(ctx, next_song), 
+                    bot.loop
+                )
+                
+                # SEND EMBED
+                asyncio.run_coroutine_threadsafe(
                     ctx.send(embed=create_song_embed(ctx, next_song)),
                     bot.loop
                 )
