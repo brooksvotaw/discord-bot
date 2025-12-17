@@ -160,6 +160,11 @@ async def query_youtube(search_query):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             yt_info = ydl.extract_info(search_query, download=False)
 
+            # DIRECT VIDEO LINK
+            if not 'entries' in yt_info:
+                song = Song.from_youtube(yt_info)
+                return [song]
+
             # PLAYLIST
             if len(yt_info['entries']) > 3: # Not the best logic but I imagine any playlists linked will have more than 3 songs, ytsearch3 returns 3 entries always
                 
@@ -173,7 +178,7 @@ async def query_youtube(search_query):
                 return playlist
 
             # SINGLE VIDEO
-            else:
+            elif not ('youtube.com' in search_query or 'youtu.be' in search_query):
                 # FILTER OUT MUSIC VIDEOS
                 filtered_entries = [
                     entry for entry in yt_info['entries']
