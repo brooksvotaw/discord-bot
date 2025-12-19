@@ -12,18 +12,22 @@ import lastfm
 ### DEFINITIONS ###
 # SONG DATA
 class Song:
-    def __init__(self, title, url, audio_url, duration, source="youtube"):
-        self.title = title
+    def __init__(self, title, url, audio_url, duration, track=None, artist=None, requester=None, source="youtube"):
+        self.title = title # Youtube video title NOT the song title
+        self.track = track
+        self.artist = artist
         self.url = url
         self.audio_url = audio_url
         self.duration = duration
-        self.requester = None # May want to change this later but will just manually set in the discord command to separate logic
+        self.requester = requester # May want to change this later but will just manually set in the discord command to separate logic
         self.source = source
     
     @classmethod
-    def from_youtube(cls, info):
+    def from_youtube(cls, info, song_name = None, artist_name = None):
         return cls(
             title=info['title'],
+            track = song_name,
+            artist = artist_name,
             url=info['webpage_url'],
             audio_url=info['url'],
             duration=info['duration'],
@@ -143,7 +147,7 @@ async def load_next_autoplay_song(ctx):
     rec_search = f"{rec['artist']} {rec['title']}"
 
     # QUERY YOUTUBE FOR REC AND ADD TO AUTOPLAY QUEUE
-    yt_results = await query_youtube(rec_search)
+    yt_results = await query_youtube(rec_search, rec['title'], rec['artist'])
     if yt_results:
         song = yt_results[0]
         song.requester = "Autoplay"
@@ -154,53 +158,54 @@ async def load_next_autoplay_song(ctx):
         load_next_autoplay_song(ctx)
 
 
-async def query_youtube(search_query):
-    try:
+async def query_youtube(search_query, song_name = None, artist_name = None):
+    # TODO CLEAN UP THE ARGUMENTS FOR THIS - THROWING THESE IN HERE TO ALLOW SONG - ARTIST DATA ON AUTOPLAY SONGS
+    #try:
         # YOUTUBE SEARCH
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            yt_info = ydl.extract_info(search_query, download=False)
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        yt_info = ydl.extract_info(search_query, download=False)
 
-            # DIRECT VIDEO LINK
-            if not 'entries' in yt_info:
-                song = Song.from_youtube(yt_info)
-                return [song]
+        # DIRECT VIDEO LINK
+        if not 'entries' in yt_info:
+            song = Song.from_youtube(yt_info)
+            return [song]
 
-            # PLAYLIST
-            if len(yt_info['entries']) > 3: # Not the best logic but I imagine any playlists linked will have more than 3 songs, ytsearch3 returns 3 entries always
-                
-                # RETRIVE ALL SONG DATA
-                playlist = []
-                for entry in yt_info['entries']:
-                    if entry:
-                        song = Song.from_youtube(entry)
-                        playlist.append(song)
-                
-                return playlist
+        # PLAYLIST
+        if len(yt_info['entries']) > 3: # Not the best logic but I imagine any playlists linked will have more than 3 songs, ytsearch3 returns 3 entries always
+            
+            # RETRIVE ALL SONG DATA
+            playlist = []
+            for entry in yt_info['entries']:
+                if entry:
+                    song = Song.from_youtube(entry)
+                    playlist.append(song)
+            
+            return playlist
 
-            # SINGLE VIDEO
-            elif not ('youtube.com' in search_query or 'youtu.be' in search_query):
-                # FILTER OUT MUSIC VIDEOS
-                filtered_entries = [
-                    entry for entry in yt_info['entries']
-                    if entry 
-                    and '(clean)' not in entry.get('title', '').lower()
-                    and 'clean version' not in entry.get('title', '').lower()
-                    and 'album' not in entry.get('title', '').lower()
-                    and (
-                        # Allow if it contains "lyrics" or "lyric"
-                        'lyric' in entry.get('title', '').lower()
-                        or (
-                            # Otherwise, exclude these patterns
-                            'music video' not in entry.get('title', '').lower()
-                            and 'official video' not in entry.get('title', '').lower()
-                            and not ('official' in entry.get('title', '').lower() and 'video' in entry.get('title', '').lower())
-                        )
+        # SINGLE VIDEO
+        elif not ('youtube.com' in search_query or 'youtu.be' in search_query):
+            # FILTER OUT MUSIC VIDEOS
+            filtered_entries = [
+                entry for entry in yt_info['entries']
+                if entry 
+                and '(clean)' not in entry.get('title', '').lower()
+                and 'clean version' not in entry.get('title', '').lower()
+                and 'album' not in entry.get('title', '').lower()
+                and (
+                    # Allow if it contains "lyrics" or "lyric"
+                    'lyric' in entry.get('title', '').lower()
+                    or (
+                        # Otherwise, exclude these patterns
+                        'music video' not in entry.get('title', '').lower()
+                        and 'official video' not in entry.get('title', '').lower()
+                        and not ('official' in entry.get('title', '').lower() and 'video' in entry.get('title', '').lower())
                     )
-                ]
-                best_entry = filtered_entries[0] if filtered_entries else yt_info['entries'][0]
-                song = Song.from_youtube(best_entry)
-                return [song]
-    except:
+                )
+            ]
+            best_entry = filtered_entries[0] if filtered_entries else yt_info['entries'][0]
+            song = Song.from_youtube(best_entry, song_name, artist_name)
+            return [song]
+    #except:
         return
 
 
@@ -284,10 +289,12 @@ def create_song_embed(ctx, song, mb_results=None):
         color=discord.Color.green(),
         timestamp=discord.utils.utcnow()
     )
-    # MUSICBRAINZ MATCH
+    # MUSICBRAINZ MATCH / AUTOPLAY TRACK INFO
     if mb_results:
         embed.add_field(name="Identified As", value=f"`{mb_results['artist']} - {mb_results['track']}`", inline=False)
-    
+    elif from_autoplay and song.track and song.artist:
+        embed.add_field(name="Track Info", value=f"`{song.artist} - {song.track}`", inline=False)
+
     # DURATION
     duration_str = f"{song.duration // 60}:{song.duration % 60:02d}"
     embed.add_field(name="Duration", value=duration_str, inline=True)
