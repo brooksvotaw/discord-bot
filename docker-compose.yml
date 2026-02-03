@@ -1,6 +1,7 @@
 services:
   discord-music-bot:
     build: .
+    command: sh -c "pip install --upgrade --no-cache-dir yt-dlp && python -u bot.py"
     container_name: discord-bot
     restart: unless-stopped
     environment:
