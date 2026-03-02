@@ -111,7 +111,7 @@ def get_autoplay_recommendations(guild_id):
 
 
 def is_autoplay_enabled(guild_id):
-    return autoplay_enabled.get(guild_id, False)
+    return True
 
 
 async def fetch_autoplay_recommendations(ctx, mbid, artist, track):
@@ -324,7 +324,7 @@ def create_song_embed(ctx, song, mb_results=None):
 def create_playlist_embed(playlist_title, song_count, first_song, duration):
     embed = discord.Embed(
         title="Playlist Queued",
-        description=f"**{playlist_title}**",
+        # description=f"**{playlist_title}**",
         color=discord.Color.green(),
         timestamp=discord.utils.utcnow()
     )
@@ -660,23 +660,18 @@ async def bump(ctx, position: int):
 @bot.command()
 @in_voice_channel()
 async def autoplay(ctx):
-    current_status = is_autoplay_enabled(ctx.guild.id)
-    autoplay_enabled[ctx.guild.id] = not current_status
-    
-    new_status = "ENABLED" if not current_status else "DISABLED"
-    status_emoji = "✅" if not current_status else "❌"
-    
-    await ctx.send(embed=create_embed("Autoplay Toggled", f"Autoplay is now **{new_status}** {status_emoji}", discord.Color.purple()))
+    await ctx.send(embed=create_embed("Autoplay", "Autoplay is now **always enabled** ✅\nThe bot will automatically queue similar songs when the queue runs empty.", discord.Color.purple()))
+
 
 @bot.command()
 async def help(ctx):
     embed = create_embed("BIG CHINA Command List", "Available commands:", color=discord.Color.gold())
     
-    embed.add_field(
-        name="/autoplay",
-        value="Toggle autoplay on/off. If enabled, /played tracks able to be identified will create an autoplay queue to continue playing when the main queue is empty",
-        inline=False
-    )
+    # embed.add_field(
+    #     name="/autoplay",
+    #     value="Toggle autoplay on/off. If enabled, /played tracks able to be identified will create an autoplay queue to continue playing when the main queue is empty",
+    #     inline=False
+    # )
 
     embed.add_field(
         name="/bump <position>",
