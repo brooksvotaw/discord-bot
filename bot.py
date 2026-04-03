@@ -155,58 +155,59 @@ async def load_next_autoplay_song(ctx):
 
     # RETRY WITH NEXT SONG IF NOT FOUND
     else:
-        load_next_autoplay_song(ctx)
+        await load_next_autoplay_song(ctx)
 
 
 async def query_youtube(search_query, song_name = None, artist_name = None):
     # TODO CLEAN UP THE ARGUMENTS FOR THIS - THROWING THESE IN HERE TO ALLOW SONG - ARTIST DATA ON AUTOPLAY SONGS
-    #try:
+    try:
         # YOUTUBE SEARCH
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        yt_info = ydl.extract_info(search_query, download=False)
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            yt_info = await asyncio.to_thread(ydl.extract_info, search_query, False)
 
-        # DIRECT VIDEO LINK
-        if not 'entries' in yt_info:
-            song = Song.from_youtube(yt_info)
-            return [song]
+            # DIRECT VIDEO LINK
+            if not 'entries' in yt_info:
+                song = Song.from_youtube(yt_info)
+                return [song]
 
-        # PLAYLIST
-        if len(yt_info['entries']) > 3: # Not the best logic but I imagine any playlists linked will have more than 3 songs, ytsearch3 returns 3 entries always
-            
-            # RETRIVE ALL SONG DATA
-            playlist = []
-            for entry in yt_info['entries']:
-                if entry:
-                    song = Song.from_youtube(entry)
-                    playlist.append(song)
-            
-            return playlist
+            # PLAYLIST
+            if len(yt_info['entries']) > 3: # Not the best logic but I imagine any playlists linked will have more than 3 songs, ytsearch3 returns 3 entries always
+                
+                # RETRIVE ALL SONG DATA
+                playlist = []
+                for entry in yt_info['entries']:
+                    if entry:
+                        song = Song.from_youtube(entry)
+                        playlist.append(song)
+                
+                return playlist
 
-        # SINGLE VIDEO
-        elif not ('youtube.com' in search_query or 'youtu.be' in search_query):
-            # FILTER OUT MUSIC VIDEOS
-            filtered_entries = [
-                entry for entry in yt_info['entries']
-                if entry 
-                and '(clean)' not in entry.get('title', '').lower()
-                and 'clean version' not in entry.get('title', '').lower()
-                and 'album' not in entry.get('title', '').lower()
-                and (
-                    # Allow if it contains "lyrics" or "lyric"
-                    'lyric' in entry.get('title', '').lower()
-                    or (
-                        # Otherwise, exclude these patterns
-                        'music video' not in entry.get('title', '').lower()
-                        and 'official video' not in entry.get('title', '').lower()
-                        and not ('official' in entry.get('title', '').lower() and 'video' in entry.get('title', '').lower())
+            # SINGLE VIDEO
+            elif not ('youtube.com' in search_query or 'youtu.be' in search_query):
+                # FILTER OUT MUSIC VIDEOS
+                filtered_entries = [
+                    entry for entry in yt_info['entries']
+                    if entry 
+                    and '(clean)' not in entry.get('title', '').lower()
+                    and 'clean version' not in entry.get('title', '').lower()
+                    and 'album' not in entry.get('title', '').lower()
+                    and (
+                        # Allow if it contains "lyrics" or "lyric"
+                        'lyric' in entry.get('title', '').lower()
+                        or (
+                            # Otherwise, exclude these patterns
+                            'music video' not in entry.get('title', '').lower()
+                            and 'official video' not in entry.get('title', '').lower()
+                            and not ('official' in entry.get('title', '').lower() and 'video' in entry.get('title', '').lower())
+                        )
                     )
-                )
-            ]
-            best_entry = filtered_entries[0] if filtered_entries else yt_info['entries'][0]
-            song = Song.from_youtube(best_entry, song_name, artist_name)
-            return [song]
-    #except:
-        return
+                ]
+                best_entry = filtered_entries[0] if filtered_entries else yt_info['entries'][0]
+                song = Song.from_youtube(best_entry, song_name, artist_name)
+                return [song]
+    except Exception as e:
+        print(f"Error querying YouTube: {e}")
+        return None
 
 
 async def play_song(ctx, song, from_autoplay=False):
@@ -220,7 +221,11 @@ async def play_song(ctx, song, from_autoplay=False):
     # CALLBACK - TRIGGERS AFTER PLAY_SONG FINISHES
     def after_playing(error):
         if error:
-            create_embed("Error", error, discord.Color.red())
+            print(f"[after_playing] Playback error: {error}")  # at least log it
+            asyncio.run_coroutine_threadsafe(
+                ctx.send(embed=create_embed("Playback Error", str(error), discord.Color.red())),
+                bot.loop
+            )
         
         queue = get_queue(ctx.guild.id)
         
@@ -386,6 +391,13 @@ async def play(ctx, *, search):
     voice_channel = ctx.author.voice.channel
     if not ctx.voice_client:
         await voice_channel.connect(self_deaf=True)
+    elif ctx.voice_client.channel != voice_channel:
+        await ctx.voice_client.move_to(voice_channel)
+
+    # GUARD: Connection may have failed after retries (e.g. DAVE protocol rejection)
+    if not ctx.voice_client:
+        await ctx.send(embed=create_embed("Error", "Failed to connect to voice channel.", discord.Color.red()))
+        return
 
     queue = get_queue(ctx.guild.id)
 
